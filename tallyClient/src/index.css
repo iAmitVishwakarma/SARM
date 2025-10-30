@@ -1,0 +1,13 @@
+@import "tailwindcss";
+/* @theme {
+  --color-mint-500: oklch(0.72 0.11 178);
+} */
+
+@theme{
+        --color-brand-blue: #1E3A8A;
+        --color-brand-green : #2ECC71;
+        --color-brand-orange : #F97316;
+        --color-brand-charcoal : #111827;
+        --color-brand-light : #F9FAFB;
+    
+}
