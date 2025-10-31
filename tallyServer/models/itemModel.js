@@ -2,11 +2,10 @@ import mongoose from 'mongoose';
 
 const itemSchema = new mongoose.Schema(
   {
-    // Har item ek user (shop) se linked hoga
     user: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      ref: 'User', // 'User' model se link karega
+      ref: 'User',
     },
     name: {
       type: String,
@@ -31,11 +30,16 @@ const itemSchema = new mongoose.Schema(
       required: true,
       default: 0,
     },
-    // Tally Analogy: Unit of Measure (e.g., "pcs", "kg", "ft")
     unit: {
       type: String,
       required: true,
       default: 'pcs',
+    },
+    // --- NEW FIELD ---
+    gstRate: {
+      type: Number, // Store GST as a percentage, e.g., 18 for 18%
+      required: true,
+      default: 0,
     },
   },
   {

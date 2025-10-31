@@ -23,4 +23,6 @@ export const TRANSACTION_TYPES = {
   PURCHASE: 'Purchase',
   SALES_RETURN: 'SalesReturn',
   PURCHASE_RETURN: 'PurchaseReturn',
+  PAYMENT: 'Payment', // Future ke liye
+  RECEIPT: 'Receipt', // Future ke liye
 };

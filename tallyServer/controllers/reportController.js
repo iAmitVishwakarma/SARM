@@ -10,18 +10,15 @@ const getDashboardStats = asyncHandler(async (req, res) => {
   const userId = req.user._id;
 
   // 1. Get today's date range (IST)
-  // Note: Yeh server ke time par based hai. Production ke liye behtar timezoning zaroori hai.
   const today = new Date();
   today.setHours(0, 0, 0, 0); // Start of today
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1); // Start of tomorrow
 
   try {
-    // Hum saare calculations parallel mein run karenge
     const [salesTodayData, stockValueData, pendingDebtorsData, recentTxs] =
       await Promise.all([
-        
-        // A. Calculate Sales Today (Tally Day Book Summary)
+        // A. Calculate Sales Today
         Transaction.aggregate([
           {
             $match: {
@@ -38,7 +35,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
           },
         ]),
 
-        // B. Calculate Total Stock Value (Tally Stock Summary)
+        // B. Calculate Total Stock Value
         Item.aggregate([
           { $match: { user: userId } },
           {
@@ -52,7 +49,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
           },
         ]),
 
-        // C. Calculate Pending Debtors (Tally Outstanding)
+        // C. Calculate Pending Debtors
         Party.aggregate([
           {
             $match: {
@@ -69,14 +66,13 @@ const getDashboardStats = asyncHandler(async (req, res) => {
           },
         ]),
 
-        // D. Get 5 Recent Transactions (Tally Day Book)
+        // D. Get 5 Recent Transactions
         Transaction.find({ user: userId })
           .populate('party', 'name')
           .sort({ createdAt: -1 })
           .limit(5),
       ]);
 
-    // 4. Sab data ko ek JSON object mein format karein
     const stats = {
       salesToday: salesTodayData[0]?.totalSales || 0,
       stockValue: stockValueData[0]?.totalValue || 0,
@@ -97,8 +93,6 @@ const getDashboardStats = asyncHandler(async (req, res) => {
 // @access  Private
 const getSalesChartData = asyncHandler(async (req, res) => {
   const userId = req.user._id;
-
-  // Pichle 30 din ka data calculate karein
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   thirtyDaysAgo.setHours(0, 0, 0, 0);
@@ -113,7 +107,6 @@ const getSalesChartData = asyncHandler(async (req, res) => {
         },
       },
       {
-        // Date ke hisaab se group karein
         $group: {
           _id: {
             $dateToString: { format: '%Y-%m-%d', date: '$date' },
@@ -121,19 +114,78 @@ const getSalesChartData = asyncHandler(async (req, res) => {
           totalSales: { $sum: '$grandTotal' },
         },
       },
-      { $sort: { _id: 1 } }, // Date se sort karein
+      { $sort: { _id: 1 } },
     ]);
 
-    // Chart.js ke format mein data ko taiyaar karein
-    const labels = salesData.map(d => new Date(d._id).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }));
-    const data = salesData.map(d => d.totalSales);
+    const labels = salesData.map((d) =>
+      new Date(d._id).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+      })
+    );
+    const data = salesData.map((d) => d.totalSales);
 
     res.status(200).json({ labels, data });
-
   } catch (error) {
-     res.status(500);
+    res.status(500);
     throw new Error('Error fetching chart data: ' + error.message);
   }
 });
 
-export { getDashboardStats, getSalesChartData };
+// --- NEW FUNCTION ---
+// @desc    Get Profit & Loss data
+// @route   GET /api/reports/profit-loss
+// @access  Private
+const getProfitAndLoss = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  try {
+    // 1. Aggregate all transaction types
+    const results = await Transaction.aggregate([
+      { $match: { user: userId } },
+      {
+        $group: {
+          _id: '$type', // Group by transaction type (Sale, Purchase, Payment, etc.)
+          totalAmount: { $sum: '$grandTotal' },
+        },
+      },
+    ]);
+
+    // 2. Process the results into a simple object
+    const totals = {
+      Sale: 0,
+      SalesReturn: 0,
+      Purchase: 0,
+      PurchaseReturn: 0,
+      Payment: 0, // This is our Expense
+    };
+
+    results.forEach((r) => {
+      if (totals.hasOwnProperty(r._id)) {
+        totals[r._id] = r.totalAmount;
+      }
+    });
+
+    // 3. Calculate P&L
+    const netSales = totals.Sale - totals.SalesReturn;
+    const netPurchases = totals.Purchase - totals.PurchaseReturn;
+    // Note: This is a simple P&L. A real one also needs Opening/Closing Stock.
+    // For now, Gross Profit = Net Sales - Net Purchases
+    const grossProfit = netSales - netPurchases;
+    // Net Profit = Gross Profit - Expenses
+    const netProfit = grossProfit - totals.Payment;
+
+    res.status(200).json({
+      netSales,
+      netPurchases,
+      totalExpenses: totals.Payment,
+      grossProfit,
+      netProfit,
+    });
+  } catch (error) {
+    res.status(500);
+    throw new Error('Error fetching P&L data: ' + error.message);
+  }
+});
+
+export { getDashboardStats, getSalesChartData, getProfitAndLoss };

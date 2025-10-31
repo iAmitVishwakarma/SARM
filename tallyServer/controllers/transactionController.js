@@ -11,16 +11,25 @@ const createTransaction = asyncHandler(async (req, res) => {
   const { party, type, date, items, subTotal, totalGst, grandTotal, notes } =
     req.body;
 
+  // --- NEW LOGIC: Check if this is an item-based entry ---
+  const isItemEntry =
+    type === 'Sale' ||
+    type === 'Purchase' ||
+    type === 'SalesReturn' ||
+    type === 'PurchaseReturn';
+
   // 1. Basic validation
-  if (!party || !type || !items || items.length === 0) {
+  if (!party || !type) {
     res.status(400);
-    throw new Error('Please provide party, type, and at least one item');
+    throw new Error('Please provide party and type');
   }
 
-  // --- Industry Level: Atomic Operations ---
-  // Hum database "session" ka use karenge. Iska matlab hai, ya toh sab kuch
-  // (Transaction create, Item update, Party update) ek saath hoga, ya kuch bhi nahi.
-  // Isse data kabhi bhi corrupt nahi hoga.
+  // --- NEW LOGIC: Item validation only if it's an item entry ---
+  if (isItemEntry && (!items || items.length === 0)) {
+    res.status(400);
+    throw new Error('Please provide at least one item for this transaction type');
+  }
+
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -31,7 +40,8 @@ const createTransaction = asyncHandler(async (req, res) => {
       party,
       type,
       date,
-      items,
+      // --- NEW LOGIC: Only add items if it's an item entry ---
+      items: isItemEntry ? items : [],
       subTotal: Number(subTotal),
       totalGst: Number(totalGst),
       grandTotal: Number(grandTotal),
@@ -41,34 +51,67 @@ const createTransaction = asyncHandler(async (req, res) => {
     const createdTransaction = await transaction.save({ session });
 
     // 3. Update Item Stock (Stock Summary)
-    const stockUpdates = items.map(async (txItem) => {
-      const { item: itemId, qty } = txItem;
-      const quantity = Number(qty);
-      let stockChange = 0;
+    // --- NEW LOGIC: Only run this block for item entries ---
+    if (isItemEntry) {
+      const stockUpdates = items.map(async (txItem) => {
+        const { item: itemId, qty } = txItem;
+        const quantity = Number(qty);
+        let stockChange = 0;
 
-      if (type === 'Sale' || type === 'PurchaseReturn') {
-        stockChange = -quantity; // Stock kam hoga
-      } else if (type === 'Purchase' || type === 'SalesReturn') {
-        stockChange = quantity; // Stock badhega
-      }
+        if (type === 'Sale' || type === 'PurchaseReturn') {
+          stockChange = -quantity; // Stock kam hoga
+        } else if (type === 'Purchase' || type === 'SalesReturn') {
+          stockChange = quantity; // Stock badhega
+        }
 
-      return Item.updateOne(
-        { _id: itemId, user: req.user._id }, // Security check: Item user ka hi ho
-        { $inc: { currentStock: stockChange } }, // $inc = atomic increment/decrement
-        { session }
-      );
-    });
-    await Promise.all(stockUpdates);
+        return Item.updateOne(
+          { _id: itemId, user: req.user._id }, // Security check: Item user ka hi ho
+          { $inc: { currentStock: stockChange } }, // $inc = atomic increment/decrement
+          { session }
+        );
+      });
+      await Promise.all(stockUpdates);
+    }
 
     // 4. Update Party Balance (Ledger)
     let balanceChange = 0;
     const amount = Number(grandTotal);
 
+    // --- UPDATED LOGIC: Added Payment and Receipt ---
+    if (
+      type === 'Sale' ||
+      type === 'PurchaseReturn' ||
+      type === 'Payment' // Hum party ko payment kar rahe hain (Dene Hain kam honge)
+    ) {
+      balanceChange = amount;
+    } else if (
+      type === 'Purchase' ||
+      type === 'SalesReturn' ||
+      type === 'Receipt' // Party se paisa mil raha hai (Lene Hain kam honge)
+    ) {
+      balanceChange = -amount;
+    }
+
+    // Correction for Tally Logic:
+    // Lene Hain (Debtor, balance > 0)
+    // Dene Hain (Creditor, balance < 0)
+    
+    // Sale (Lene Hain Badhega): +amount
+    // Purchase (Dene Hain Badhega): -amount
+    // Receipt (Lene Hain Ghatega): -amount
+    // Payment (Dene Hain Ghatega): +amount
+    
+    // Resetting logic for clarity:
     if (type === 'Sale' || type === 'PurchaseReturn') {
       balanceChange = amount; // Lene Hain (Balance badhega)
     } else if (type === 'Purchase' || type === 'SalesReturn') {
       balanceChange = -amount; // Dene Hain (Balance ghatega)
+    } else if (type === 'Receipt') {
+      balanceChange = -amount; // Lene Hain (Balance ghatega)
+    } else if (type === 'Payment') {
+      balanceChange = amount; // Dene Hain (Balance badhega, i.e., closer to 0)
     }
+
 
     await Party.updateOne(
       { _id: party, user: req.user._id },
@@ -84,7 +127,9 @@ const createTransaction = asyncHandler(async (req, res) => {
     await session.abortTransaction();
     console.error(error);
     res.status(400);
-    throw new Error('Transaction failed, rolling back changes. Error: ' + error.message);
+    throw new Error(
+      'Transaction failed, rolling back changes. Error: ' + error.message
+    );
   } finally {
     session.endSession();
   }

@@ -11,18 +11,16 @@ export default function DataProvider({ children }) {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Humein auth state chahiye taaki hum data tabhi fetch karein jab user logged in ho
   const { isAuthenticated } = useContext(AuthContext);
 
   // --- Data Fetching Functions ---
   const fetchAllData = async () => {
     setLoading(true);
     try {
-      // Hum saara data parallel mein fetch karenge
       const [itemsRes, partiesRes, txsRes] = await Promise.all([
         axios.get('/api/items'),
         axios.get('/api/parties'),
-        axios.get('/api/transactions'), // Yeh Tally "Day Book" hai
+        axios.get('/api/transactions'),
       ]);
       setItems(itemsRes.data);
       setParties(partiesRes.data);
@@ -34,52 +32,89 @@ export default function DataProvider({ children }) {
     }
   };
 
-  // Jab user login kare (isAuthenticated = true), tab data fetch karein
   useEffect(() => {
     if (isAuthenticated) {
       fetchAllData();
     } else {
-      // Agar user logout kare, toh state ko clear kar dein
       setItems([]);
       setParties([]);
       setTransactions([]);
     }
   }, [isAuthenticated]);
 
-  // --- Action Functions (Reducer ki jagah) ---
-  
-  // Yeh function 'AddEntryForm' se call hoga
+  // --- Action Functions ---
+
   const addTransaction = async (newTransactionData) => {
     try {
-      // 1. Naya transaction backend ko bhejein
       await axios.post('/api/transactions', newTransactionData);
-      
-      // 2. Data successfully create ho gaya, ab saara data refresh karein
-      // (Tally ki tarah, entry karte hi har report update ho jaati hai)
-      fetchAllData();
+      fetchAllData(); // Refresh all data
     } catch (error) {
       console.error('Failed to add transaction:', error);
-      throw error; // Error ko form tak wapas bhejein taaki user ko pata chale
+      throw error;
     }
   };
-  
+
+  // --- NEW FUNCTION: Add Item ---
+  const addItem = async (itemData) => {
+    try {
+      await axios.post('/api/items', itemData);
+      fetchAllData(); // Refresh all data
+    } catch (error) {
+      console.error('Failed to add item:', error);
+      throw error;
+    }
+  };
+
+  // --- NEW FUNCTION: Update Item ---
+  const updateItem = async (itemId, itemData) => {
+    try {
+      await axios.put(`/api/items/${itemId}`, itemData);
+      fetchAllData(); // Refresh all data
+    } catch (error) {
+      console.error('Failed to update item:', error);
+      throw error;
+    }
+  };
+
+  // --- NEW FUNCTION: Add Party ---
+  const addParty = async (partyData) => {
+    try {
+      await axios.post('/api/parties', partyData);
+      fetchAllData(); // Refresh all data
+    } catch (error) {
+      console.error('Failed to add party:', error);
+      throw error;
+    }
+  };
+
+  // --- NEW FUNCTION: Update Party ---
+  const updateParty = async (partyId, partyData) => {
+    try {
+      await axios.put(`/api/parties/${partyId}`, partyData);
+      fetchAllData(); // Refresh all data
+    } catch (error) {
+      console.error('Failed to update party:', error);
+      throw error;
+    }
+  };
+
   const value = {
-    // Current state
     items,
     parties,
     transactions,
     loading,
+    refreshData: fetchAllData, // Expose refresh function
     
-    // Actions (pehle 'dispatch' tha, ab yeh object hai)
+    // --- UPDATED DISPATCH ---
     dispatch: {
       [DATA_ACTIONS.ADD_TRANSACTION]: addTransaction,
-      // Hum yahaan aur actions add kar sakte hain, jaise:
-      // addItem: (data) => ...
-      // addParty: (data) => ...
+      // We will add more later, e.g., ADD_PARTY, UPDATE_ITEM
+      // --- NEW ACTIONS ---
+      addItem,
+      updateItem,
+      addParty,
+      updateParty,
     },
-    
-    // Function to manually refresh
-    refreshData: fetchAllData,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

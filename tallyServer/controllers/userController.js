@@ -3,34 +3,29 @@ import bcrypt from 'bcryptjs';
 import User from '../models/userModel.js';
 import generateToken from '../utils/generateToken.js';
 
+// ... registerUser, loginUser, logoutUser functions ...
+// (Aapke existing functions jaise hain waise hi rahenge)
+
 // @desc    Register (Create) a new user
 // @route   POST /api/auth/register
 // @access  Public
 const registerUser = asyncHandler(async (req, res) => {
   const { shopName, email, password } = req.body;
-
-  // 1. Check if user already exists
   const userExists = await User.findOne({ email });
   if (userExists) {
-    res.status(400); // Bad Request
+    res.status(400);
     throw new Error('User already exists');
   }
-
-  // 2. Hash the password
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(password, salt);
-
-  // 3. Create new user in database
   const user = await User.create({
     shopName,
     email,
     password: hashedPassword,
   });
-
   if (user) {
-    // 4. Generate token and send response
     generateToken(res, user._id);
-    res.status(201).json({ // 201 = Created
+    res.status(201).json({
       _id: user._id,
       shopName: user.shopName,
       email: user.email,
@@ -46,13 +41,8 @@ const registerUser = asyncHandler(async (req, res) => {
 // @access  Public
 const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-
-  // 1. Find user by email
   const user = await User.findOne({ email });
-
-  // 2. Check if user exists and password matches
   if (user && (await bcrypt.compare(password, user.password))) {
-    // 3. Generate token and send response
     generateToken(res, user._id);
     res.status(200).json({
       _id: user._id,
@@ -60,7 +50,7 @@ const loginUser = asyncHandler(async (req, res) => {
       email: user.email,
     });
   } else {
-    res.status(401); // Unauthorized
+    res.status(401);
     throw new Error('Invalid email or password');
   }
 });
@@ -69,7 +59,6 @@ const loginUser = asyncHandler(async (req, res) => {
 // @route   POST /api/auth/logout
 // @access  Private (soon)
 const logoutUser = asyncHandler(async (req, res) => {
-  // Cookie ko clear kar do
   res.cookie('jwt', '', {
     httpOnly: true,
     expires: new Date(0),
@@ -82,12 +71,14 @@ const logoutUser = asyncHandler(async (req, res) => {
 // @route   GET /api/auth/profile
 // @access  Private
 const getUserProfile = asyncHandler(async (req, res) => {
-  // req.user humein 'protect' middleware se mil raha hai
   if (req.user) {
     res.status(200).json({
       _id: req.user._id,
       shopName: req.user.shopName,
       email: req.user.email,
+      // --- SEND FULL PROFILE ---
+      gstin: req.user.gstin,
+      address: req.user.address,
     });
   } else {
     res.status(404);
@@ -95,4 +86,39 @@ const getUserProfile = asyncHandler(async (req, res) => {
   }
 });
 
-export { registerUser, loginUser, logoutUser , getUserProfile };
+// --- NEW FUNCTION ---
+// @desc    Update user profile
+// @route   PUT /api/auth/profile
+// @access  Private
+const updateUserProfile = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+
+  if (user) {
+    user.shopName = req.body.shopName || user.shopName;
+    user.email = req.body.email || user.email;
+    user.gstin = req.body.gstin || user.gstin;
+    user.address = req.body.address || user.address;
+
+    // Optional: Agar password update karna hai (abhi skip kar rahe hain)
+    // if (req.body.password) {
+    //   const salt = await bcrypt.genSalt(10);
+    //   user.password = await bcrypt.hash(req.body.password, salt);
+    // }
+
+    const updatedUser = await user.save();
+
+    res.status(200).json({
+      _id: updatedUser._id,
+      shopName: updatedUser.shopName,
+      email: updatedUser.email,
+      gstin: updatedUser.gstin,
+      address: updatedUser.address,
+    });
+  } else {
+    res.status(404);
+    throw new Error('User not found');
+  }
+});
+
+
+export { registerUser, loginUser, logoutUser , getUserProfile, updateUserProfile }; // --- ADDED updateUserProfile ---

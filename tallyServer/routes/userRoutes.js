@@ -7,13 +7,18 @@ import {
   loginUser,
   logoutUser,
   getUserProfile,
+  updateUserProfile, // --- IMPORT ---
 } from '../controllers/userController.js';
 
 // Route: /api/auth
 router.post('/register', registerUser);
 router.post('/login', loginUser);
 router.post('/logout', logoutUser);
-router.route('/profile').get(protect, getUserProfile); 
 
+// --- UPDATED ROUTE ---
+router
+  .route('/profile')
+  .get(protect, getUserProfile)
+  .put(protect, updateUserProfile); // --- ADDED PUT METHOD ---
 
 export default router;

@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-// Yeh ek chota schema hai jo har transaction ke andar items ko store karega
+// --- UPDATED SUB-SCHEMA ---
 const transactionItemSchema = new mongoose.Schema({
   item: {
     type: mongoose.Schema.Types.ObjectId,
@@ -20,6 +20,12 @@ const transactionItemSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  // --- NEW FIELD ---
+  gstAmount: {
+    type: Number,
+    required: true,
+    default: 0,
+  }
 });
 
 const transactionSchema = new mongoose.Schema(
@@ -29,13 +35,11 @@ const transactionSchema = new mongoose.Schema(
       required: true,
       ref: 'User',
     },
-    // Kis party (customer/supplier) ke saath transaction hua
     party: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
       ref: 'Party',
     },
-    // Tally Analogy: Voucher Type
     type: {
       type: String,
       required: true,
@@ -46,10 +50,8 @@ const transactionSchema = new mongoose.Schema(
       required: true,
       default: Date.now,
     },
-    // Ek array jo uss transaction ke saare items ko store karega
     items: [transactionItemSchema],
     
-    // Bill Totals
     subTotal: {
       type: Number,
       required: true,
@@ -65,7 +67,6 @@ const transactionSchema = new mongoose.Schema(
       required: true,
       default: 0,
     },
-    // Tally Analogy: Narration
     notes: {
       type: String,
       default: '',

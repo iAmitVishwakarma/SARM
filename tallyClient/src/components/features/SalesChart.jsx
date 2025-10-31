@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useState, useEffect } from 'react'; // useMemo aur useData hatayein
 import { Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -9,11 +9,11 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import useData from '../../hooks/useData';
 import Card from '../common/Card';
-import { TRANSACTION_TYPES } from '../../utils/constants';
+import axios from 'axios'; // axios import karein
+import Loader from '../common/Loader'; // Loader import karein
 
-// 1. Register the components Chart.js needs
+// Register components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -24,46 +24,35 @@ ChartJS.register(
 );
 
 export default function SalesChart() {
-  const { transactions } = useData();
+  const [chartData, setChartData] = useState(null); // Data ke liye state banayein
 
-  // 2. Process the transaction data
-  const chartData = useMemo(() => {
-    // We'll process data into a simple format: { 'YYYY-MM-DD': totalSales }
-    const salesByDate = transactions
-      .filter(tx => tx.type === TRANSACTION_TYPES.SALE) // Only get sales
-      .reduce((acc, tx) => {
-        const date = tx.date; // Use the date from the transaction
-        if (!acc[date]) {
-          acc[date] = 0;
-        }
-        acc[date] += tx.grandTotal;
-        return acc;
-      }, {});
-
-    // Sort by date to make the chart chronological
-    const sortedDates = Object.keys(salesByDate).sort();
-    
-    // 3. Format for Chart.js
-    const labels = sortedDates.map(date => 
-      new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
-    );
-    const data = sortedDates.map(date => salesByDate[date]);
-
-    return {
-      labels,
-      datasets: [
-        {
-          label: 'Total Sales',
-          data: data,
-          backgroundColor: 'rgba(30, 58, 138, 0.6)', // 'brand-blue' with 60% opacity
-          borderColor: 'rgba(30, 58, 138, 1)',
-          borderWidth: 1,
-        },
-      ],
+  // Backend se chart data fetch karein
+  useEffect(() => {
+    const fetchChartData = async () => {
+      try {
+        // Naya API endpoint call karein
+        const { data } = await axios.get('/api/reports/sales-chart');
+        
+        // Data ko Chart.js format mein set karein
+        setChartData({
+          labels: data.labels,
+          datasets: [
+            {
+              label: 'Total Sales',
+              data: data.data,
+              backgroundColor: 'rgba(30, 58, 138, 0.6)',
+              borderColor: 'rgba(30, 58, 138, 1)',
+              borderWidth: 1,
+            },
+          ],
+        });
+      } catch (error) {
+        console.error('Failed to fetch chart data', error);
+      }
     };
-  }, [transactions]); // Re-calculate only when transactions change
+    fetchChartData();
+  }, []); // Page load par ek baar run hoga
 
-  // 4. Configure chart options
   const options = {
     responsive: true,
     plugins: {
@@ -72,10 +61,19 @@ export default function SalesChart() {
       },
       title: {
         display: true,
-        text: 'Sales by Day',
+        text: 'Sales by Day (Last 30 Days)',
       },
     },
   };
+
+  // Jab tak data load ho raha hai
+  if (!chartData) {
+    return (
+      <Card>
+        <Loader />
+      </Card>
+    );
+  }
 
   return (
     <Card>
