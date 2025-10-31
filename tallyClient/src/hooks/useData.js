@@ -6,6 +6,6 @@ export default function useData() {
   if (!context) {
     throw new Error('useData must be used within a DataProvider');
   }
-  // We return state and dispatch separately for easy destructuring
-  return { ...context.state, dispatch: context.dispatch };
+  // Ab hum poora context return karte hain
+  return context;
 }

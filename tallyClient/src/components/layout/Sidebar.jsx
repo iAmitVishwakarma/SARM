@@ -16,11 +16,12 @@ export default function Sidebar() {
 
     const { logout } = useAuth();
   return (
-    <aside className="w-64 flex-shrink-0 bg-brand-blue text-black">
+   <aside className="w-64 flex-shrink-0 bg-brand-blue text-white"> 
       <div className="flex h-16 items-center justify-center p-4">
-        <h2 className="text-2xl font-bold">SARM</h2>
+        {/* FIX: Make title text white or light as well */}
+        <h2 className="text-2xl font-bold text-white">SARM</h2>
       </div>
-    <nav className="p-4">
+      <nav className="p-4">
         <ul>
           <NavLink to={ROUTES.DASHBOARD}>🏠 Dashboard</NavLink>
           <NavLink to={ROUTES.ADD_ENTRY}>➕ Add Entry</NavLink>

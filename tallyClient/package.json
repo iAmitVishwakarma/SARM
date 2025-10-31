@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.16",
+    "axios": "^1.13.1",
     "chart.js": "^4.5.1",
     "jspdf": "^3.0.3",
     "react": "^19.1.1",
@@ -33,5 +34,10 @@
   },
   "overrides": {
     "vite": "npm:rolldown-vite@7.1.14"
-  }
+  },
+  "description": "SARM is a modern, simple, web-based accounting application designed for small Indian business owners (kirana shops, stationery stores, etc.) who currently manage their accounts in notebooks. It provides the power of an accounting system like Tally with the simplicity of a spreadsheet.",
+  "main": "eslint.config.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }

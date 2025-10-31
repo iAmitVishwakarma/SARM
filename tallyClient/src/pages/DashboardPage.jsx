@@ -6,6 +6,14 @@ import { formatCurrency, formatDate } from '../utils/formatters';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { generateInvoicePDF } from '../services/pdfService';
+import { getSmartAlerts } from '../services/aiAssistant';
+
+
+const alertStyles = {
+  warning: 'bg-orange-100 text-orange-800',
+  info: 'bg-blue-100 text-blue-800',
+  success: 'bg-green-100 text-green-800',
+};
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -30,16 +38,10 @@ export default function DashboardPage() {
     
     // 3. Sales Today (Mock logic, as we don't have real-time dates yet)
     // For now, let's just sum all 'Sale' transactions from our mock data
-    const today = new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD'
-    const salesToday = transactions.reduce((total, tx) => {
-      // In a real app, we'd compare tx.date to today.
-      // For this demo, let's just sum all sales.
-      if (tx.type === 'Sale') {
-        return total + tx.grandTotal;
-      }
-      return total;
-    }, 0);
-    // TODO: Filter sales by `tx.date === today`
+const today = new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD'
+const salesToday = transactions
+      .filter(tx => tx.type === 'Sale' && tx.date === today)
+      .reduce((total, tx) => total + tx.grandTotal, 0);
 
     return { stockValue, pendingDebtors, salesToday };
   }, [items, parties, transactions]);
@@ -49,9 +51,7 @@ export default function DashboardPage() {
   
   // --- Get AI Insights (Placeholder for M10) ---
   // TODO: Get this from aiAssistant.js in M10
-  const aiAlerts = [
-    { id: 1, message: "Low stock: Lays Chips (Blue) below 60 units.", type: "warning" },
-  ];
+ const aiAlerts = useMemo(() => getSmartAlerts(items, parties), [items, parties]);
 
   const handleDownloadInvoice = (tx) => {
     const party = parties.find(p => p.id === tx.partyId);

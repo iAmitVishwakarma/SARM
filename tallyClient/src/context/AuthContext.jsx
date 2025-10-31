@@ -1,57 +1,56 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../utils/constants';
+import axios from 'axios'; // <-- Import axios
 
-// 1. Create the Context
 const AuthContext = createContext(null);
 
 export default function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // To check auth status on load
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // 3. Check for existing session on app load (from localStorage)
+  // Check for existing session using the 'jwt' cookie
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem('sarm_user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+    const checkUserStatus = async () => {
+      try {
+        // Humne naya '/api/auth/profile' route banaya tha
+        const { data } = await axios.get('/api/auth/profile');
+        setUser(data);
+      } catch (error) {
+        setUser(null);
+        console.log('No user session found');
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Failed to parse user from localStorage", error);
-    } finally {
-      setLoading(false);
-    }
+    };
+    checkUserStatus();
   }, []);
 
-  // 4. Login function
-  const login = (email, password) => {
-    // --- THIS IS MOCK LOGIC ---
-    // In a real app, you'd make an API call here
-    console.log("Attempting login with:", email, password);
-    if (email === 'admin@sarm.com' && password === '1234') {
-      const mockUser = {
-        email: 'admin@sarm.com',
-        shopName: 'Ankit General Store',
-        token: 'mock_jwt_token_12345',
-      };
-      
-      setUser(mockUser);
-      localStorage.setItem('sarm_user', JSON.stringify(mockUser));
+  // Login function - Ab API call karega
+  const login = async (email, password) => {
+    try {
+      // Backend ko data bhejein
+      const { data } = await axios.post('/api/auth/login', { email, password });
+      setUser(data);
       navigate(ROUTES.DASHBOARD);
-    } else {
-      alert('Invalid credentials. Try admin@sarm.com and 1234');
+    } catch (error) {
+      console.error('Login failed:', error.response?.data?.message || error.message);
+      alert('Invalid email or password');
     }
   };
 
-  // 5. Logout function
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('sarm_user');
-    navigate(ROUTES.LOGIN);
+  // Logout function - Ab API call karega
+  const logout = async () => {
+    try {
+      await axios.post('/api/auth/logout');
+      setUser(null);
+      navigate(ROUTES.LOGIN);
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
-  // 6. Provide values to children
   const value = {
     user,
     isAuthenticated: !!user,
@@ -63,5 +62,4 @@ export default function AuthProvider({ children }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-// 2. Export the context itself (for the hook)
 export { AuthContext };

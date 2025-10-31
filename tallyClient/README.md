@@ -1,16 +1,60 @@
-# React + Vite
+#  SARM - Smart Accounting Record Manager
+### Har Dukandaar ka Digital Hisaab
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+SARM is a modern, simple, web-based accounting application designed for small Indian business owners (kirana shops, stationery stores, etc.) who currently manage their accounts in notebooks. It provides the power of an accounting system like Tally with the simplicity of a spreadsheet.
 
-Currently, two official plugins are available:
+This project is the **frontend client**, built with React, Vite, and Tailwind CSS.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## React Compiler
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Features
 
-## Expanding the ESLint configuration
+* **📈 Dashboard:** At-a-glance view of daily sales, total stock value, and pending payments (debtors).
+* **➕ Add Entry:** A single, simple form to record all transaction types (Sale, Purchase, Returns).
+* **📦 Stock Management:** Live-updating stock levels. Adding a "Sale" automatically decreases stock; a "Purchase" increases it.
+* **📒 Party Ledger:** Automatically maintains the balance for every customer (Debtor) and supplier (Creditor).
+* **🤖 AI Alerts:** Rule-based smart alerts for "Low Stock" and "Pending Payments".
+* **📊 Reports:** A visual sales chart to track performance over time.
+* **📄 Exports:**
+    * Export party ledgers to **Excel** (`.xlsx`).
+    * Generate and download simple PDF **invoices**.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 💻 Tech Stack
+
+* **Framework:** React (Vite)
+* **Styling:** Tailwind CSS
+* **Routing:** React Router DOM v6
+* **State Management:** React Context + `useReducer`
+* **Charting:** `Chart.js` (via `react-chartjs-2`)
+* **File Exports:** `SheetJS (xlsx)` and `jsPDF`
+
+## 🚀 How to Run Locally
+
+This project contains only the `client` (frontend).
+
+1.  **Clone the repository:**
+    ```bash
+    git clone [https://github.com/your-username/sarm-app.git](https://github.com/your-username/sarm-app.git)
+    cd sarm-app/client
+    ```
+
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
+
+3.  **Run the development server:**
+    ```bash
+    npm run dev
+    ```
+
+4.  **Open the app:**
+    Open [http://localhost:5173](http://localhost:5173) (or the port shown in your terminal) in your browser.
+
+**Demo Credentials:**
+* **Email:** `admin@sarm.com`
+* **Password:** `1234`
+
+## 🏗️ Project Structure
+
+The client application follows a feature-based, modular structure:

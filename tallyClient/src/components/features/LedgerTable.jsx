@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import useData from '../../hooks/useData';
 import { formatCurrency } from '../../utils/formatters';
 import Card from '../common/Card';
 import Table from '../common/Table';
+import { sortByKey } from '../../utils/dsa';
 
 // Helper component to display the balance in a user-friendly way
 const PartyBalance = ({ balance }) => {
@@ -28,12 +29,15 @@ const PartyBalance = ({ balance }) => {
 export default function LedgerTable() {
   const { parties } = useData();
   
+const sortedParties = useMemo(() => sortByKey(parties, 'name'), [parties]);
+
   const headers = ['Party Name', 'Type', 'Balance (Hisaab)'];
 
-  return (
+ return (
     <Card>
       <Table headers={headers}>
-        {parties.map((party) => (
+        {/* FIX: Map over sortedParties */}
+        {sortedParties.map((party) => (
           <tr key={party.id}>
             <td className="whitespace-nowrap px-6 py-4 font-medium text-gray-900">{party.name}</td>
             <td className="whitespace-nowrap px-6 py-4 text-gray-500">{party.type}</td>
