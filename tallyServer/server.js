@@ -8,6 +8,7 @@ import itemRoutes from './routes/itemRoutes.js';
 import partyRoutes from './routes/partyRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
+import { startDailyDigestJob } from './services/cronService.js'; 
 
 // Connect to MongoDB
 connectDB();
@@ -32,6 +33,12 @@ app.use('/api/parties', partyRoutes); // <--  PARTY ROUTES
 app.use('/api/transactions', transactionRoutes); // <-- TRANSACTION ROUTES
 app.use('/api/reports', reportRoutes); // <-- REPORT ROUTES
 
+
+// Schedule daily digest email job
+if (process.env.NODE_ENV !== 'test') { // Test karte waqt jobs na chalayein
+  startDailyDigestJob(); // Daily digest job ko chalu karein
+  console.log('Cron job for daily digest scheduled.');
+}
 
 // TODO: Error handling middleware
 
